@@ -20,27 +20,33 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(current_dir, 'safe_model_v3.h5')
 
 # ==========================================
-# 2. MODERN UI STYLING (CSS)
+# 2. MODERN UI STYLING (FORCED DARK THEME)
 # ==========================================
 st.markdown("""
     <style>
-        /* MAIN BACKGROUND */
-        .stApp {
-            background-color: #050505;
-            background-image: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #050505 60%);
+        /* FORCE DARK BACKGROUND ON EVERYTHING */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+            background-color: #050505 !important;
+            background-image: radial-gradient(circle at 50% 0%, #1a1a2e 0%, #050505 60%) !important;
+            color: #ffffff !important;
         }
-        
+
+        /* FIX TEXT COLOR FOR ADAPTIVE ELEMENTS */
+        p, span, label, .stMarkdown {
+            color: #ffffff !important;
+        }
+
         /* TYPOGRAPHY */
-        h1, h2, h3 {
+        h1, h2, h3, h4, h5, h6 {
             font-family: 'Helvetica Neue', sans-serif;
             font-weight: 700;
-            color: #ffffff;
+            color: #ffffff !important;
         }
         
         /* CUSTOM CARDS */
         .metric-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
             border-radius: 12px;
             padding: 20px;
             text-align: center;
@@ -49,47 +55,49 @@ st.markdown("""
         }
         .metric-card:hover {
             transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(0, 255, 136, 0.4) !important;
         }
         
         /* RESULT BANNERS */
         .result-fake {
-            background: linear-gradient(90deg, #5b1e1e 0%, #ff4b4b 100%);
+            background: linear-gradient(90deg, #5b1e1e 0%, #ff4b4b 100%) !important;
             padding: 15px;
             border-radius: 8px;
             text-align: center;
             font-size: 24px;
             font-weight: bold;
-            color: white;
+            color: white !important;
             box-shadow: 0 4px 15px rgba(255, 75, 75, 0.3);
         }
         .result-real {
-            background: linear-gradient(90deg, #1e4d2b 0%, #00ff88 100%);
+            background: linear-gradient(90deg, #1e4d2b 0%, #00ff88 100%) !important;
             padding: 15px;
             border-radius: 8px;
             text-align: center;
             font-size: 24px;
             font-weight: bold;
-            color: white;
+            color: white !important;
             text-shadow: 0 1px 2px rgba(0,0,0,0.2);
             box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
         }
         
-        /* FILE UPLOADER */
-        .stFileUploader {
-            border: 2px dashed #444;
+        /* FILE UPLOADER DARK FIX */
+        [data-testid="stFileUploader"] {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 2px dashed #444 !important;
             border-radius: 10px;
             padding: 20px;
         }
-        
-        /* STREAMLIT ELEMENTS OVERRIDE */
+
+        /* HIDE STREAMLIT BRANDING */
         div[data-testid="stHeader"] {background: transparent;}
         footer {visibility: hidden;}
+        #MainMenu {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. CORE LOGIC
+# 3. CORE LOGIC (DCT & MODEL)
 # ==========================================
 def generate_frequency_map(image_array):
     try:
@@ -146,19 +154,18 @@ def load_deepfake_model():
         st.error(f"❌ Error loading model: {e}")
         return None
 
+# Load the model once
 model = load_deepfake_model()
 
 # ==========================================
-# 4. MODERN UI LAYOUT
+# 4. UI LAYOUT
 # ==========================================
 
-# --- HERO SECTION (UPDATED TITLE, NO LOGO) ---
 st.title("Deepfake Detection EfficientNet + ResNet")
 st.caption("Dual-Stream Forensic Analysis Architecture")
 
 st.divider()
 
-# --- TOP SECTION: INPUT & REPORT ---
 col_left, col_right = st.columns([1, 2], gap="large")
 
 with col_left:
@@ -168,8 +175,8 @@ with col_left:
     with st.expander("ℹ️ How it works"):
         st.markdown("""
         **Dual-Stream Logic:**
-        1. **Spatial Stream:** Analyzes visible artifacts (eyes, lighting).
-        2. **Frequency Stream:** Detects invisible GAN upsampling noise.
+        1. **Spatial Stream (EfficientNet):** Analyzes visible artifacts like unnatural blending and lighting.
+        2. **Frequency Stream (ResNet):** Detects spectral traces of GAN upsampling via Discrete Cosine Transform (DCT).
         """)
 
 if uploaded_file is not None and model is not None:
@@ -179,26 +186,23 @@ if uploaded_file is not None and model is not None:
         prediction = model.predict(inputs)
         confidence = prediction[0][0]
 
-    # --- FORENSIC REPORT (Top Right) ---
+    # --- FORENSIC REPORT ---
     with col_right:
         st.subheader("2. Forensic Report")
         
-        # Prepare variables
         is_fake = confidence > 0.50
         result_text = "⚠️ DEEPFAKE DETECTED" if is_fake else "✅ AUTHENTIC MEDIA"
         result_class = "result-fake" if is_fake else "result-real"
         pct_value = confidence if is_fake else (1 - confidence)
         
-        # Main Banner
         st.markdown(f'<div class="{result_class}">{result_text}</div>', unsafe_allow_html=True)
-        st.write("") # Spacer
+        st.write("") 
 
-        # Key Metrics
         m_col1, m_col2, m_col3 = st.columns(3)
         with m_col1:
             st.markdown(f"""
             <div class="metric-card">
-                <div style="font-size:12px; opacity:0.7;">CONFIDENCE</div>
+                <div style="font-size:12px; opacity:0.7;">PROBABILITY</div>
                 <div style="font-size:24px; font-weight:bold;">{confidence:.2%}</div>
             </div>
             """, unsafe_allow_html=True)
@@ -217,35 +221,27 @@ if uploaded_file is not None and model is not None:
             </div>
             """, unsafe_allow_html=True)
 
-    # ============================================
-    # 3. FULL WIDTH EVIDENCE VISUALIZATION
-    # ============================================
-    st.write("---") # Visual Separator
+    # --- EVIDENCE VISUALIZATION ---
+    st.write("---")
     st.subheader("3. Detailed Evidence Visualization")
     
-    # Create side-by-side full width columns
     vis_col1, vis_col2 = st.columns(2)
     
     with vis_col1:
         st.markdown("##### Stream A: Spatial Domain (RGB)")
         st.image(original_img, caption="Visual Appearance (Human Visible)", use_container_width=True)
-        if is_fake:
-            st.caption("⚠️ Analysis: Model scans for blending artifacts, unnatural lighting, and texture inconsistencies.")
     
     with vis_col2:
         st.markdown("##### Stream B: Frequency Domain (DCT)")
         freq_display = (freq_map_vis * 255).astype(np.uint8)
         st.image(freq_display, caption="Spectral Appearance (Machine Visible)", use_container_width=True)
-        if is_fake:
-            st.caption("⚠️ Analysis: High-frequency noise pattern detected. This suggests GAN upsampling traces.")
 
 else:
-    # Empty State on Right Side
     with col_right:
         st.info("👈 Waiting for image input...")
         st.markdown("""
         <div style="text-align: center; opacity: 0.5; padding: 50px;">
-            <h3 style="color: #444;">Ready to Scan</h3>
-            <p>Upload an image to begin the dual-stream analysis.</p>
+            <h3 style="color: #666;">Ready to Scan</h3>
+            <p>Upload an image to begin forensic analysis.</p>
         </div>
         """, unsafe_allow_html=True)
